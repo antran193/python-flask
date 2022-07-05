@@ -10,13 +10,101 @@ try:
     from urlparse import urlparse, urljoin
 except ImportError:
     from urllib.parse import urlparse, urljoin
-
+import geopandas as gpd
 from jinja2 import escape
 from jinja2.utils import generate_lorem_ipsum
 from flask import Flask, make_response, request, redirect, url_for, abort, session, jsonify
+# import shapefile
+from json import dumps
+import sqlalchemy as db
+from geoalchemy2 import Geometry
+# import arcpy
+# import psycopg2
+# import arcgisscripting
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'secret string')
+
+
+user = "gis_user"
+password = "GIS#p0scDb"
+host = "10.70.123.125"
+port = 5432
+database = "tilemap"
+ 
+
+
+# gp = arcgisscripting.create()
+# conn = psycopg2.connect("dbname='tilemap' user='gis_user' host='10.70.123.125' password='GIS#p0scDb'") #connecting to DB
+
+# cur = conn.cursor()  #setting up connection cursor
+# cur.execute('''drop table thuadat''')
+# cur.execute('''CREATE TABLE drugpoints
+#             (gid serial primary key,
+#              lo text,
+#              mdsd  text,
+#              dientich float,
+#              congty text,
+#              geom geometry);''')
+# conn.commit()
+
+
+
+    # cur.execute('''insert into thuadat(lo,mdsd,dientich,congty, geom)
+    #                 values(%s,%s,%s,%s,ST_SetSRID(ST_MakePoint(%s,%s), 4269))'''
+    #                 ,(lo,mdsd,dientich,congty))
+    # conn.commit()
+
+
+@app.route('/shp2geo')
+def shp2geo():
+    # reader = shapefile.Reader("data/thuadat.shp")
+    # fields = reader.fields[1:]
+    # field_names = [field[0] for field in fields]
+    # buffer = []
+    # for sr in reader.shapeRecords():
+    #     atr = dict(zip(field_names, sr.record))
+    #     geom = sr.shape.__geo_interface__
+    #     buffer.append(dict(type="Feature", \
+    #     geometry=geom, properties=atr)) 
+    
+    #     # write the GeoJSON file
+    
+    # geojson = open("pyshp-demo.json", "w")
+    # geojson.write(dumps({"type": "FeatureCollection", "features": buffer}, indent=2) + "\n")
+    # geojson.close()
+    shp_file = gpd.read_file('data/thuadat.shp')
+    shp_file.to_file('export-geo/pyshp-demo.json', driver='GeoJSON')
+    return "shp2geo ok"
+
+@app.route('/geo2shp')
+def geo2shp():
+    gdf = gpd.read_file('export-geo/pyshp-demo.json',encoding='utf8')
+    gdf.to_file('export-shp/file.shp',encoding='utf8')
+
+    #Read shapefile using GeoPandas
+    gdf = gpd.read_file("export-shp/file.shp")
+    for index, row in gdf.iterrows():
+        print(index, row["geometry"])
+        break
+
+    db_connection_url = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+
+    con = db.create_engine(db_connection_url)
+    connection = con.connect()
+
+    metadata = db.MetaData()
+
+
+    # thuadat = db.Table('thuadat', metadata, autoload=True, autoload_with=con)
+
+    # query = db.insert(thuadat).values( fclass='naveen', newcode=6000) 
+    # ResultProxy = connection.execute(query)
+
+
+    print("success")
+    
+    return "geo2shp ok"
 
 
 # get name value from query string and cookie
